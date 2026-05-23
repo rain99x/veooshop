@@ -61,6 +61,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "veoo — handmade jewelry" },
       { property: "og:description", content: "Soft luxury handmade jewelry. Order via Instagram." },
       { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "veoo — handmade jewelry" },
+      { name: "twitter:description", content: "Soft luxury handmade jewelry. Order via Instagram." },
+      { name: "twitter:card", content: "summary" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
