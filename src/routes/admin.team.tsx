@@ -23,10 +23,14 @@ function TeamAdmin() {
     queryFn: async () => {
       const { data: roles, error } = await supabase
         .from("user_roles")
-        .select("id, role, user_id, profiles!inner(id, email, display_name)")
+        .select("id, role, user_id, created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return roles;
+      const userIds = Array.from(new Set(roles.map((r) => r.user_id)));
+      const { data: profiles } = await supabase
+        .from("profiles").select("id, email, display_name").in("id", userIds);
+      const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
+      return roles.map((r) => ({ ...r, profile: byId.get(r.user_id) ?? null }));
     },
     enabled: isAdmin,
   });
