@@ -101,7 +101,7 @@ function TeamAdmin() {
 
       <div className="space-y-2">
         {(members ?? []).map((m) => {
-          const profile = m.profiles as { id: string; email: string | null; display_name: string | null } | null;
+          const profile = m.profile;
           return (
             <div key={m.id} className="border border-border rounded-xl p-4 bg-card flex items-center justify-between">
               <div>
