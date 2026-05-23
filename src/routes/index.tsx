@@ -28,7 +28,9 @@ function Home() {
       if (error) throw error;
       return data.map((p) => ({
         ...p,
-        tags: p.product_tags?.map((pt: { tags: { name: string } | null }) => pt.tags).filter(Boolean) ?? [],
+        tags: (p.product_tags ?? [])
+          .map((pt: { tags: { name: string } | null }) => pt.tags)
+          .filter((t): t is { name: string } => !!t),
       }));
     },
   });
