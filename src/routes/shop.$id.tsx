@@ -89,23 +89,25 @@ function ProductPage() {
     .map((pt: { tags: { name: string } | null }) => pt.tags)
     .filter((t: { name: string } | null): t is { name: string } => !!t);
 
+  const p = product;
   function addToCart() {
     if (hasVariants && !selectedVariant) {
       toast.error("Please select a color");
       return;
     }
     cartStore.add({
-      product_id: product.id,
-      product_code: product.product_code,
+      product_id: p.id,
+      product_code: p.product_code,
       variant_id: selectedVariant?.id ?? null,
       color_name: selectedVariant?.color_name ?? null,
-      name: product.name,
-      price: Number(product.price),
-      image_url: product.image_url,
+      name: p.name,
+      price: Number(p.price),
+      image_url: p.image_url,
       max: stock,
     }, qty);
-    toast.success(`Added ${product.name}${selectedVariant ? ` (${selectedVariant.color_name})` : ""} to your cart`);
+    toast.success(`Added ${p.name}${selectedVariant ? ` (${selectedVariant.color_name})` : ""} to your cart`);
   }
+
 
   return (
     <div className="min-h-screen flex flex-col">
