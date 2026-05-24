@@ -18,8 +18,9 @@ function Checkout() {
   const { items, total } = useCart();
   const navigate = useNavigate();
   const [shipping, setShipping] = useState({
-    name: "", phone: "", address: "", city: "", postal: "", notes: "",
+    name: "", phone: "", address: "", city: "", postal: "",
   });
+  const [sellerNote, setSellerNote] = useState("");
   const [orderCode, setOrderCode] = useState<string | null>(null);
   const [summary, setSummary] = useState<string>("");
   const [copied, setCopied] = useState(false);
@@ -40,24 +41,32 @@ function Checkout() {
   }
 
   function buildSummary(code: string) {
-    const lines = [
+    const lines: string[] = [
       `🧾 ORDER ${code}`,
       "",
-      "Items:",
-      ...items.map((i) => `• ${i.name} × ${i.quantity} — ${formatPrice(i.price * i.quantity)}`),
+      "Products:",
+    ];
+    for (const i of items) {
+      lines.push(`• ${i.product_code ?? i.name}`);
+      if (i.color_name) lines.push(`  Color: ${i.color_name}`);
+      lines.push(`  Qty: ${i.quantity} — ${formatPrice(i.price * i.quantity)}`);
+    }
+    if (sellerNote.trim()) {
+      lines.push("", "Seller Note:", sellerNote.trim());
+    }
+    lines.push(
       "",
-      `Total: ${formatPrice(total)}`,
+      `Temporary Total: ${formatPrice(total)}`,
       "",
       "Shipping to:",
-      `${shipping.name}`,
-      `${shipping.phone}`,
-      `${shipping.address}`,
-      `${shipping.city} ${shipping.postal}`,
-      shipping.notes ? `Notes: ${shipping.notes}` : "",
+      shipping.name,
+      shipping.phone,
+      shipping.address,
+      `${shipping.city} ${shipping.postal}`.trim(),
       "",
       "— Sent from veoo.shop",
-    ].filter(Boolean);
-    return lines.join("\n");
+    );
+    return lines.filter((l) => l !== undefined).join("\n");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -157,7 +166,7 @@ function Checkout() {
       <section className="mx-auto max-w-4xl px-6 py-16 w-full">
         <h1 className="font-display text-4xl sm:text-5xl mb-2">Checkout</h1>
         <p className="text-sm text-muted-foreground mb-10">
-          Your shipping details stay in your browser. Only an order code is saved on our side.
+          Your shipping details and notes stay in your browser. Only an order code is saved on our side.
         </p>
 
         <form onSubmit={handleSubmit} className="grid md:grid-cols-[1fr_320px] gap-12">
@@ -170,22 +179,32 @@ function Checkout() {
               <Field label="Postal code" value={shipping.postal} onChange={(v) => setShipping({ ...shipping, postal: v })} />
             </div>
             <div>
-              <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2">Notes (optional)</label>
+              <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-2">
+                Note to seller (optional)
+              </label>
               <textarea
-                value={shipping.notes}
-                onChange={(e) => setShipping({ ...shipping, notes: e.target.value })}
+                value={sellerNote}
+                onChange={(e) => setSellerNote(e.target.value)}
                 rows={3}
+                placeholder="e.g. gift wrapping, custom size, urgent order…"
                 className="w-full rounded-xl border border-border bg-card p-3 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
               />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Included in your Instagram message — not stored permanently.
+              </p>
             </div>
           </div>
 
           <aside className="bg-card border border-border rounded-2xl p-6 h-fit shadow-soft">
             <h2 className="font-display text-xl mb-4">Order</h2>
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-3 text-sm">
               {items.map((i) => (
-                <li key={i.id} className="flex justify-between gap-2">
-                  <span className="truncate">{i.name} × {i.quantity}</span>
+                <li key={i.key} className="flex justify-between gap-2">
+                  <span className="truncate">
+                    <span className="text-muted-foreground">{i.product_code ?? i.name}</span>
+                    {i.color_name && <span className="block text-xs text-muted-foreground">Color: {i.color_name}</span>}
+                    <span className="block text-xs text-muted-foreground">Qty: {i.quantity}</span>
+                  </span>
                   <span className="text-muted-foreground shrink-0">{formatPrice(i.price * i.quantity)}</span>
                 </li>
               ))}

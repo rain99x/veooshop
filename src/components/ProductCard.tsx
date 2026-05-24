@@ -7,17 +7,21 @@ export type ProductCardData = {
   price: number | string;
   image_url: string | null;
   inventory_quantity: number;
+  product_code?: string | null;
   tags?: { name: string }[];
+  variants?: { inventory_quantity: number; is_active: boolean }[];
 };
 
 export function ProductCard({ p }: { p: ProductCardData }) {
-  const soldOut = p.inventory_quantity <= 0;
+  const variantStock = (p.variants ?? [])
+    .filter((v) => v.is_active)
+    .reduce((s, v) => s + v.inventory_quantity, 0);
+  const hasVariants = (p.variants?.length ?? 0) > 0;
+  const totalStock = hasVariants ? variantStock : p.inventory_quantity;
+  const soldOut = totalStock <= 0;
+
   return (
-    <Link
-      to="/shop/$id"
-      params={{ id: p.id }}
-      className="group block"
-    >
+    <Link to="/shop/$id" params={{ id: p.id }} className="group block">
       <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-muted">
         {p.image_url ? (
           <img
@@ -38,6 +42,11 @@ export function ProductCard({ p }: { p: ProductCardData }) {
         )}
       </div>
       <div className="mt-4 px-1">
+        {p.product_code && (
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1">
+            {p.product_code}
+          </div>
+        )}
         <h3 className="font-display text-lg leading-tight">{p.name}</h3>
         <div className="mt-1 flex items-center justify-between">
           <span className="text-sm text-muted-foreground">{formatPrice(p.price)}</span>

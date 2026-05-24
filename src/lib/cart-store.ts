@@ -1,7 +1,12 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 export type CartItem = {
-  id: string;
+  /** Stable line key — product_id + variant_id (so same product in different colors = different lines) */
+  key: string;
+  product_id: string;
+  product_code: string | null;
+  variant_id: string | null;
+  color_name: string | null;
   name: string;
   price: number;
   image_url: string | null;
@@ -9,7 +14,7 @@ export type CartItem = {
   max: number;
 };
 
-const KEY = "veoo_cart_v1";
+const KEY = "veoo_cart_v2";
 
 function read(): CartItem[] {
   if (typeof window === "undefined") return [];
@@ -25,16 +30,16 @@ const listeners = new Set<() => void>();
 let snapshot: CartItem[] = [];
 let initialized = false;
 
-function notify() {
-  listeners.forEach((l) => l());
-}
+function notify() { listeners.forEach((l) => l()); }
 
 function persist(items: CartItem[]) {
   snapshot = items;
-  if (typeof window !== "undefined") {
-    sessionStorage.setItem(KEY, JSON.stringify(items));
-  }
+  if (typeof window !== "undefined") sessionStorage.setItem(KEY, JSON.stringify(items));
   notify();
+}
+
+export function makeLineKey(productId: string, variantId: string | null) {
+  return `${productId}::${variantId ?? ""}`;
 }
 
 export const cartStore = {
@@ -44,44 +49,32 @@ export const cartStore = {
     snapshot = read();
     notify();
   },
-  subscribe(cb: () => void) {
-    listeners.add(cb);
-    return () => listeners.delete(cb);
-  },
-  get() {
-    return snapshot;
-  },
-  add(item: Omit<CartItem, "quantity">, qty = 1) {
+  subscribe(cb: () => void) { listeners.add(cb); return () => listeners.delete(cb); },
+  get() { return snapshot; },
+  add(item: Omit<CartItem, "quantity" | "key"> & { key?: string }, qty = 1) {
+    const key = item.key ?? makeLineKey(item.product_id, item.variant_id);
     const items = [...snapshot];
-    const existing = items.find((i) => i.id === item.id);
+    const existing = items.find((i) => i.key === key);
     if (existing) {
       existing.quantity = Math.min(existing.quantity + qty, item.max);
     } else {
-      items.push({ ...item, quantity: Math.min(qty, item.max) });
+      items.push({ ...item, key, quantity: Math.min(qty, item.max) });
     }
     persist(items);
   },
-  setQty(id: string, qty: number) {
+  setQty(key: string, qty: number) {
     const items = snapshot
-      .map((i) => (i.id === id ? { ...i, quantity: Math.max(1, Math.min(qty, i.max)) } : i))
+      .map((i) => (i.key === key ? { ...i, quantity: Math.max(1, Math.min(qty, i.max)) } : i))
       .filter((i) => i.quantity > 0);
     persist(items);
   },
-  remove(id: string) {
-    persist(snapshot.filter((i) => i.id !== id));
-  },
-  clear() {
-    persist([]);
-  },
+  remove(key: string) { persist(snapshot.filter((i) => i.key !== key)); },
+  clear() { persist([]); },
 };
 
 export function useCart() {
-  // SSR-safe init via effect
   const [ready, setReady] = useState(false);
-  useEffect(() => {
-    cartStore.init();
-    setReady(true);
-  }, []);
+  useEffect(() => { cartStore.init(); setReady(true); }, []);
   const items = useSyncExternalStore(
     cartStore.subscribe,
     () => cartStore.get(),

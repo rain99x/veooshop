@@ -21,7 +21,7 @@ function Home() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, price, image_url, inventory_quantity, product_tags(tags(name))")
+        .select("id, name, price, image_url, inventory_quantity, product_code, product_tags(tags(name)), product_variants(inventory_quantity, is_active)")
         .eq("is_active", true)
         .order("created_at", { ascending: false })
         .limit(4);
@@ -31,6 +31,7 @@ function Home() {
         tags: (p.product_tags ?? [])
           .map((pt: { tags: { name: string } | null }) => pt.tags)
           .filter((t): t is { name: string } => !!t),
+        variants: p.product_variants ?? [],
       }));
     },
   });

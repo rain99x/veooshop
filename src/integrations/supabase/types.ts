@@ -153,6 +153,50 @@ export type Database = {
           },
         ]
       }
+      product_variants: {
+        Row: {
+          color_hex: string | null
+          color_name: string
+          created_at: string
+          id: string
+          inventory_quantity: number
+          is_active: boolean
+          product_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color_hex?: string | null
+          color_name: string
+          created_at?: string
+          id?: string
+          inventory_quantity?: number
+          is_active?: boolean
+          product_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color_hex?: string | null
+          color_name?: string
+          created_at?: string
+          id?: string
+          inventory_quantity?: number
+          is_active?: boolean
+          product_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           created_at: string
@@ -161,8 +205,11 @@ export type Database = {
           image_url: string | null
           inventory_quantity: number
           is_active: boolean
+          is_handmade: boolean
           name: string
+          prep_time: string | null
           price: number
+          product_code: string | null
           updated_at: string
         }
         Insert: {
@@ -172,8 +219,11 @@ export type Database = {
           image_url?: string | null
           inventory_quantity?: number
           is_active?: boolean
+          is_handmade?: boolean
           name: string
+          prep_time?: string | null
           price?: number
+          product_code?: string | null
           updated_at?: string
         }
         Update: {
@@ -183,8 +233,11 @@ export type Database = {
           image_url?: string | null
           inventory_quantity?: number
           is_active?: boolean
+          is_handmade?: boolean
           name?: string
+          prep_time?: string | null
           price?: number
+          product_code?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -254,6 +307,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_product_code: { Args: { _tag_name: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
