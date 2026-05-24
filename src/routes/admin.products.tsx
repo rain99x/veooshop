@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPrice } from "@/lib/format";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
@@ -12,6 +12,14 @@ export const Route = createFileRoute("/admin/products")({
 });
 
 type Tag = { id: string; name: string };
+type Variant = {
+  id: string;
+  color_name: string;
+  color_hex: string | null;
+  inventory_quantity: number;
+  sort_order: number;
+  is_active: boolean;
+};
 type Product = {
   id: string;
   name: string;
@@ -20,7 +28,11 @@ type Product = {
   image_url: string | null;
   inventory_quantity: number;
   is_active: boolean;
+  product_code: string | null;
+  is_handmade: boolean;
+  prep_time: string | null;
   product_tags: { tag_id: string; tags: Tag | null }[];
+  product_variants: Variant[];
 };
 
 function ProductsAdmin() {
@@ -34,7 +46,7 @@ function ProductsAdmin() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*, product_tags(tag_id, tags(id, name))")
+        .select("*, product_tags(tag_id, tags(id, name)), product_variants(*)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as Product[];
@@ -146,6 +158,8 @@ function ProductAdminCard({
   const [inv, setInv] = useState(p.inventory_quantity);
   const dirty = inv !== p.inventory_quantity;
   const tagNames = p.product_tags.map((pt) => pt.tags?.name).filter(Boolean).join(" · ");
+  const hasVariants = p.product_variants.length > 0;
+  const variantStock = p.product_variants.reduce((s, v) => s + v.inventory_quantity, 0);
 
   return (
     <div className="border border-border rounded-2xl overflow-hidden bg-card">
@@ -157,6 +171,11 @@ function ProductAdminCard({
         )}
         {!p.is_active && (
           <div className="absolute top-2 left-2 bg-background text-xs px-2 py-1 rounded-full">Hidden</div>
+        )}
+        {p.product_code && (
+          <div className="absolute top-2 right-2 bg-background/90 text-[10px] uppercase tracking-widest px-2 py-1 rounded-full">
+            {p.product_code}
+          </div>
         )}
       </div>
       <div className="p-4">
@@ -172,27 +191,48 @@ function ProductAdminCard({
             </div>
           )}
         </div>
-        <div className="mt-4 flex items-center gap-2">
-          <label className="text-xs text-muted-foreground">Stock</label>
-          <input
-            type="number" min={0}
-            value={inv}
-            onChange={(e) => setInv(parseInt(e.target.value) || 0)}
-            className="w-20 rounded-lg border border-border bg-background px-2 py-1 text-sm"
-          />
-          {dirty && (
-            <button
-              onClick={() => onInventoryUpdate(inv)}
-              className="rounded-full bg-primary text-primary-foreground px-3 py-1 text-xs"
-            >
-              Save
-            </button>
-          )}
-        </div>
+
+        {hasVariants ? (
+          <div className="mt-3 space-y-1">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Variants · {variantStock} total in stock
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {p.product_variants.map((v) => (
+                <span key={v.id} className={`text-[11px] px-2 py-0.5 rounded-full border ${v.inventory_quantity <= 0 ? "border-border text-muted-foreground line-through" : "border-border"}`}>
+                  {v.color_name}: {v.inventory_quantity}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 flex items-center gap-2">
+            <label className="text-xs text-muted-foreground">Stock</label>
+            <input
+              type="number" min={0}
+              value={inv}
+              onChange={(e) => setInv(parseInt(e.target.value) || 0)}
+              className="w-20 rounded-lg border border-border bg-background px-2 py-1 text-sm"
+            />
+            {dirty && (
+              <button
+                onClick={() => onInventoryUpdate(inv)}
+                className="rounded-full bg-primary text-primary-foreground px-3 py-1 text-xs"
+              >Save</button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+type VariantDraft = {
+  id?: string;
+  color_name: string;
+  color_hex: string;
+  inventory_quantity: number;
+};
 
 function ProductForm({
   product, allTags, onClose, onSaved,
@@ -204,37 +244,63 @@ function ProductForm({
     image_url: product?.image_url ?? "",
     inventory_quantity: product?.inventory_quantity ?? 0,
     is_active: product?.is_active ?? true,
+    is_handmade: product?.is_handmade ?? true,
+    prep_time: product?.prep_time ?? "",
+    product_code: product?.product_code ?? "",
   });
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
     product?.product_tags?.map((pt) => pt.tag_id) ?? []
   );
+  const [variants, setVariants] = useState<VariantDraft[]>(
+    product?.product_variants?.map((v) => ({
+      id: v.id,
+      color_name: v.color_name,
+      color_hex: v.color_hex ?? "",
+      inventory_quantity: v.inventory_quantity,
+    })) ?? []
+  );
   const [newTag, setNewTag] = useState("");
   const [saving, setSaving] = useState(false);
+  const [tagsLocal, setTagsLocal] = useState(allTags);
+
+  const firstTagName = useMemo(() => {
+    const first = selectedTagIds[0];
+    return tagsLocal.find((t) => t.id === first)?.name ?? null;
+  }, [selectedTagIds, tagsLocal]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
       let productId = product?.id;
+
+      // Determine product_code (auto-generate on create if blank)
+      let productCode = form.product_code.trim();
+      if (!product && !productCode) {
+        const { data: codeData, error: codeErr } = await supabase.rpc("generate_product_code", {
+          _tag_name: firstTagName ?? "Item",
+        });
+        if (codeErr) throw codeErr;
+        productCode = codeData as string;
+      }
+
+      const payload = {
+        name: form.name,
+        description: form.description || null,
+        price: form.price,
+        image_url: form.image_url || null,
+        inventory_quantity: form.inventory_quantity,
+        is_active: form.is_active,
+        is_handmade: form.is_handmade,
+        prep_time: form.prep_time || null,
+        product_code: productCode || null,
+      };
+
       if (product) {
-        const { error } = await supabase.from("products").update({
-          name: form.name,
-          description: form.description || null,
-          price: form.price,
-          image_url: form.image_url || null,
-          inventory_quantity: form.inventory_quantity,
-          is_active: form.is_active,
-        }).eq("id", product.id);
+        const { error } = await supabase.from("products").update(payload).eq("id", product.id);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from("products").insert({
-          name: form.name,
-          description: form.description || null,
-          price: form.price,
-          image_url: form.image_url || null,
-          inventory_quantity: form.inventory_quantity,
-          is_active: form.is_active,
-        }).select("id").single();
+        const { data, error } = await supabase.from("products").insert(payload).select("id").single();
         if (error) throw error;
         productId = data.id;
       }
@@ -247,9 +313,37 @@ function ProductForm({
           const { error } = await supabase.from("product_tags").insert(rows);
           if (error) throw error;
         }
+
+        // Sync variants — delete removed, upsert kept
+        const existingIds = (product?.product_variants ?? []).map((v) => v.id);
+        const keepIds = variants.map((v) => v.id).filter(Boolean) as string[];
+        const toDelete = existingIds.filter((id) => !keepIds.includes(id));
+        if (toDelete.length > 0) {
+          await supabase.from("product_variants").delete().in("id", toDelete);
+        }
+        for (let idx = 0; idx < variants.length; idx++) {
+          const v = variants[idx];
+          if (!v.color_name.trim()) continue;
+          if (v.id) {
+            await supabase.from("product_variants").update({
+              color_name: v.color_name.trim(),
+              color_hex: v.color_hex || null,
+              inventory_quantity: v.inventory_quantity,
+              sort_order: idx,
+            }).eq("id", v.id);
+          } else {
+            await supabase.from("product_variants").insert({
+              product_id: productId,
+              color_name: v.color_name.trim(),
+              color_hex: v.color_hex || null,
+              inventory_quantity: v.inventory_quantity,
+              sort_order: idx,
+            });
+          }
+        }
       }
 
-      toast.success(product ? "Product updated" : "Product created");
+      toast.success(product ? "Product updated" : `Product created · ${productCode}`);
       onSaved();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Save failed");
@@ -259,14 +353,23 @@ function ProductForm({
   }
 
   async function createTag() {
-    const name = newTag.trim().toLowerCase();
+    const name = newTag.trim();
     if (!name) return;
-    const { data, error } = await supabase.from("tags").insert({ name }).select("id").single();
+    const { data, error } = await supabase.from("tags").insert({ name }).select("id, name").single();
     if (error) { toast.error(error.message); return; }
+    setTagsLocal([...tagsLocal, data as Tag]);
     setSelectedTagIds([...selectedTagIds, data.id]);
     setNewTag("");
-    // Refresh allTags via parent — we just push optimistically
-    allTags.push({ id: data.id, name });
+  }
+
+  function addVariant() {
+    setVariants([...variants, { color_name: "", color_hex: "", inventory_quantity: 0 }]);
+  }
+  function updateVariant(i: number, patch: Partial<VariantDraft>) {
+    setVariants(variants.map((v, idx) => (idx === i ? { ...v, ...patch } : v)));
+  }
+  function removeVariant(i: number) {
+    setVariants(variants.filter((_, idx) => idx !== i));
   }
 
   return (
@@ -278,36 +381,41 @@ function ProductForm({
         </div>
         <form onSubmit={save} className="p-5 space-y-4">
           <FormField label="Name *">
+            <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input" />
+          </FormField>
+
+          <FormField label={product ? "Product code" : "Product code (auto from tag)"}>
             <input
-              required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+              value={form.product_code}
+              onChange={(e) => setForm({ ...form, product_code: e.target.value })}
+              placeholder={!product && firstTagName ? `Auto: ${firstTagName}N` : "Leave blank to auto-generate"}
               className="input"
             />
           </FormField>
+
           <FormField label="Description">
-            <textarea
-              rows={3} value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="input"
-            />
+            <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input" />
           </FormField>
+
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="Price *">
+            <FormField label="Price (VND) *">
               <input
-                type="number" step="0.01" min={0} required
+                type="number" step="1" min={0} required
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
                 className="input"
               />
             </FormField>
-            <FormField label="Inventory">
+            <FormField label="Prep time">
               <input
-                type="number" min={0}
-                value={form.inventory_quantity}
-                onChange={(e) => setForm({ ...form, inventory_quantity: parseInt(e.target.value) || 0 })}
+                value={form.prep_time}
+                onChange={(e) => setForm({ ...form, prep_time: e.target.value })}
+                placeholder="e.g. 3–5 days"
                 className="input"
               />
             </FormField>
           </div>
+
           <FormField label="Image URL">
             <input
               type="url" placeholder="https://…"
@@ -320,7 +428,7 @@ function ProductForm({
 
           <FormField label="Tags">
             <div className="flex flex-wrap gap-2">
-              {allTags.map((t) => {
+              {tagsLocal.map((t) => {
                 const on = selectedTagIds.includes(t.id);
                 return (
                   <button
@@ -329,30 +437,77 @@ function ProductForm({
                     className={`text-xs px-3 py-1.5 rounded-full border ${
                       on ? "bg-primary text-primary-foreground border-primary" : "border-border"
                     }`}
-                  >
-                    {t.name}
-                  </button>
+                  >{t.name}</button>
                 );
               })}
             </div>
             <div className="flex gap-2 mt-3">
-              <input
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="new tag"
-                className="input flex-1"
-              />
+              <input value={newTag} onChange={(e) => setNewTag(e.target.value)} placeholder="new tag (e.g. Bracelet)" className="input flex-1" />
               <button type="button" onClick={createTag} className="rounded-full border border-border px-4 text-xs">Add tag</button>
             </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Product code format: [TagName][number] — first selected tag is used.
+            </p>
           </FormField>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox" checked={form.is_active}
-              onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-            />
-            Visible in shop
-          </label>
+          <FormField label="Color variants (per-color stock)">
+            <div className="space-y-2">
+              {variants.map((v, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={v.color_hex || "#cccccc"}
+                    onChange={(e) => updateVariant(i, { color_hex: e.target.value })}
+                    className="size-8 rounded border border-border bg-transparent cursor-pointer"
+                  />
+                  <input
+                    value={v.color_name}
+                    onChange={(e) => updateVariant(i, { color_name: e.target.value })}
+                    placeholder="Color name (e.g. Gold)"
+                    className="input flex-1"
+                  />
+                  <input
+                    type="number" min={0}
+                    value={v.inventory_quantity}
+                    onChange={(e) => updateVariant(i, { inventory_quantity: parseInt(e.target.value) || 0 })}
+                    className="input w-20"
+                    title="Stock"
+                  />
+                  <button type="button" onClick={() => removeVariant(i)} className="p-1.5 rounded-md hover:bg-accent text-destructive">
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={addVariant} className="inline-flex items-center gap-1 text-xs rounded-full border border-border px-3 py-1.5">
+                <Plus className="size-3" /> Add color
+              </button>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2">
+              If you add variants, per-color stock is used. Otherwise the simple stock field below applies.
+            </p>
+          </FormField>
+
+          {variants.length === 0 && (
+            <FormField label="Inventory">
+              <input
+                type="number" min={0}
+                value={form.inventory_quantity}
+                onChange={(e) => setForm({ ...form, inventory_quantity: parseInt(e.target.value) || 0 })}
+                className="input"
+              />
+            </FormField>
+          )}
+
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
+              Visible in shop
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.is_handmade} onChange={(e) => setForm({ ...form, is_handmade: e.target.checked })} />
+              Handmade
+            </label>
+          </div>
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="flex-1 rounded-full border border-border py-2.5 text-sm">Cancel</button>

@@ -23,7 +23,9 @@ type ProductRow = {
   price: number;
   image_url: string | null;
   inventory_quantity: number;
+  product_code: string | null;
   product_tags: { tags: { id: string; name: string } | null }[];
+  product_variants: { inventory_quantity: number; is_active: boolean }[];
 };
 
 function Shop() {
@@ -35,7 +37,7 @@ function Shop() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, description, price, image_url, inventory_quantity, product_tags(tags(id, name))")
+        .select("id, name, description, price, image_url, inventory_quantity, product_code, product_tags(tags(id, name)), product_variants(inventory_quantity, is_active)")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -56,18 +58,18 @@ function Shop() {
     if (!products) return [];
     return products
       .filter((p) =>
-        !search || p.name.toLowerCase().includes(search.toLowerCase()) ||
+        !search ||
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        (p.product_code ?? "").toLowerCase().includes(search.toLowerCase()) ||
         (p.description ?? "").toLowerCase().includes(search.toLowerCase())
       )
-      .filter((p) => {
-        if (!activeTag) return true;
-        return p.product_tags?.some((pt) => pt.tags?.id === activeTag);
-      })
+      .filter((p) => !activeTag || p.product_tags?.some((pt) => pt.tags?.id === activeTag))
       .map((p) => ({
         ...p,
         tags: (p.product_tags ?? [])
           .map((pt) => pt.tags)
           .filter((t): t is { id: string; name: string } => !!t),
+        variants: p.product_variants ?? [],
       }));
   }, [products, search, activeTag]);
 
@@ -82,7 +84,7 @@ function Shop() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <input
               type="search"
-              placeholder="Search pieces…"
+              placeholder="Search by name or code…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-full border border-border bg-card pl-11 pr-4 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-gold/40"
@@ -94,33 +96,23 @@ function Shop() {
               <button
                 onClick={() => setActiveTag(null)}
                 className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full border transition-colors ${
-                  !activeTag
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border hover:border-foreground/40"
+                  !activeTag ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-foreground/40"
                 }`}
-              >
-                All
-              </button>
+              >All</button>
               {tags.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => setActiveTag(t.id)}
                   className={`text-xs uppercase tracking-widest px-4 py-2 rounded-full border transition-colors ${
-                    activeTag === t.id
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "border-border hover:border-foreground/40"
+                    activeTag === t.id ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-foreground/40"
                   }`}
-                >
-                  {t.name}
-                </button>
+                >{t.name}</button>
               ))}
               {activeTag && (
                 <button
                   onClick={() => setActiveTag(null)}
                   className="text-xs px-3 py-2 rounded-full text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                >
-                  <X className="size-3" /> Clear
-                </button>
+                ><X className="size-3" /> Clear</button>
               )}
             </div>
           )}
