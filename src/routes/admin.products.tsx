@@ -40,6 +40,7 @@ function ProductsAdmin() {
   const { isAdmin, user } = useAuth();
   const [editing, setEditing] = useState<Product | null>(null);
   const [creating, setCreating] = useState(false);
+  const [search, setSearch] = useState("");
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["admin", "products"],
@@ -52,6 +53,19 @@ function ProductsAdmin() {
       return data as Product[];
     },
   });
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return products ?? [];
+    return (products ?? []).filter((p) => {
+      const tagStr = p.product_tags.map((pt) => pt.tags?.name ?? "").join(" ").toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.product_code ?? "").toLowerCase().includes(q) ||
+        tagStr.includes(q)
+      );
+    });
+  }, [products, search]);
 
   const { data: tags } = useQuery({
     queryKey: ["tags"],
