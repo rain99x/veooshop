@@ -117,6 +117,15 @@ function ProductsAdmin() {
         )}
       </div>
 
+      <div className="mb-4">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, product code, or tag…"
+          className="w-full max-w-md rounded-full border border-border bg-card px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+        />
+      </div>
+
       {!isAdmin && (
         <div className="mb-6 p-4 rounded-xl bg-muted text-sm text-muted-foreground">
           You can update inventory only. Ask an admin to add or edit products.
@@ -125,9 +134,11 @@ function ProductsAdmin() {
 
       {isLoading ? (
         <div className="text-muted-foreground text-sm">Loading…</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-muted-foreground text-sm">No products match your search.</div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(products ?? []).map((p) => (
+          {filtered.map((p) => (
             <ProductAdminCard
               key={p.id}
               p={p}
