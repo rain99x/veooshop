@@ -12,6 +12,7 @@ export type CartItem = {
   image_url: string | null;
   quantity: number;
   max: number;
+  selected: boolean;
 };
 
 const KEY = "veoo_cart_v2";
@@ -20,7 +21,9 @@ function read(): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = sessionStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as CartItem[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CartItem[];
+    return parsed.map((i) => ({ ...i, selected: i.selected ?? true }));
   } catch {
     return [];
   }
@@ -51,14 +54,15 @@ export const cartStore = {
   },
   subscribe(cb: () => void) { listeners.add(cb); return () => listeners.delete(cb); },
   get() { return snapshot; },
-  add(item: Omit<CartItem, "quantity" | "key"> & { key?: string }, qty = 1) {
+  add(item: Omit<CartItem, "quantity" | "key" | "selected"> & { key?: string }, qty = 1) {
     const key = item.key ?? makeLineKey(item.product_id, item.variant_id);
     const items = [...snapshot];
     const existing = items.find((i) => i.key === key);
     if (existing) {
       existing.quantity = Math.min(existing.quantity + qty, item.max);
+      existing.selected = true;
     } else {
-      items.push({ ...item, key, quantity: Math.min(qty, item.max) });
+      items.push({ ...item, key, quantity: Math.min(qty, item.max), selected: true });
     }
     persist(items);
   },
@@ -69,6 +73,15 @@ export const cartStore = {
     persist(items);
   },
   remove(key: string) { persist(snapshot.filter((i) => i.key !== key)); },
+  toggleSelect(key: string) {
+    persist(snapshot.map((i) => (i.key === key ? { ...i, selected: !i.selected } : i)));
+  },
+  setAllSelected(value: boolean) {
+    persist(snapshot.map((i) => ({ ...i, selected: value })));
+  },
+  removeKeys(keys: string[]) {
+    persist(snapshot.filter((i) => !keys.includes(i.key)));
+  },
   clear() { persist([]); },
 };
 
@@ -80,10 +93,14 @@ export function useCart() {
     () => cartStore.get(),
     () => [] as CartItem[],
   );
+  const selected = items.filter((i) => i.selected);
   return {
     items: ready ? items : [],
+    selectedItems: ready ? selected : [],
     count: items.reduce((s, i) => s + i.quantity, 0),
+    selectedCount: selected.reduce((s, i) => s + i.quantity, 0),
     total: items.reduce((s, i) => s + i.quantity * i.price, 0),
+    selectedTotal: selected.reduce((s, i) => s + i.quantity * i.price, 0),
   };
 }
 
