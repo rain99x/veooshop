@@ -71,6 +71,15 @@ export const cartStore = {
     persist(items);
   },
   remove(key: string) { persist(snapshot.filter((i) => i.key !== key)); },
+  toggleSelect(key: string) {
+    persist(snapshot.map((i) => (i.key === key ? { ...i, selected: !i.selected } : i)));
+  },
+  setAllSelected(value: boolean) {
+    persist(snapshot.map((i) => ({ ...i, selected: value })));
+  },
+  removeKeys(keys: string[]) {
+    persist(snapshot.filter((i) => !keys.includes(i.key)));
+  },
   clear() { persist([]); },
 };
 
@@ -82,10 +91,14 @@ export function useCart() {
     () => cartStore.get(),
     () => [] as CartItem[],
   );
+  const selected = items.filter((i) => i.selected);
   return {
     items: ready ? items : [],
+    selectedItems: ready ? selected : [],
     count: items.reduce((s, i) => s + i.quantity, 0),
+    selectedCount: selected.reduce((s, i) => s + i.quantity, 0),
     total: items.reduce((s, i) => s + i.quantity * i.price, 0),
+    selectedTotal: selected.reduce((s, i) => s + i.quantity * i.price, 0),
   };
 }
 
