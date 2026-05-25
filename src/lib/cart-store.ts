@@ -52,14 +52,15 @@ export const cartStore = {
   },
   subscribe(cb: () => void) { listeners.add(cb); return () => listeners.delete(cb); },
   get() { return snapshot; },
-  add(item: Omit<CartItem, "quantity" | "key"> & { key?: string }, qty = 1) {
+  add(item: Omit<CartItem, "quantity" | "key" | "selected"> & { key?: string }, qty = 1) {
     const key = item.key ?? makeLineKey(item.product_id, item.variant_id);
     const items = [...snapshot];
     const existing = items.find((i) => i.key === key);
     if (existing) {
       existing.quantity = Math.min(existing.quantity + qty, item.max);
+      existing.selected = true;
     } else {
-      items.push({ ...item, key, quantity: Math.min(qty, item.max) });
+      items.push({ ...item, key, quantity: Math.min(qty, item.max), selected: true });
     }
     persist(items);
   },
