@@ -12,6 +12,7 @@ export type CartItem = {
   image_url: string | null;
   quantity: number;
   max: number;
+  selected: boolean;
 };
 
 const KEY = "veoo_cart_v2";
