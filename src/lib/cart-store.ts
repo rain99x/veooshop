@@ -21,7 +21,9 @@ function read(): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = sessionStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as CartItem[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CartItem[];
+    return parsed.map((i) => ({ ...i, selected: i.selected ?? true }));
   } catch {
     return [];
   }
