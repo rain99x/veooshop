@@ -20,7 +20,7 @@ const KEY = "veoo_cart_v2";
 function read(): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = sessionStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as CartItem[];
     return parsed.map((i) => ({ ...i, selected: i.selected ?? true }));
@@ -37,7 +37,7 @@ function notify() { listeners.forEach((l) => l()); }
 
 function persist(items: CartItem[]) {
   snapshot = items;
-  if (typeof window !== "undefined") sessionStorage.setItem(KEY, JSON.stringify(items));
+  if (typeof window !== "undefined") localStorage.setItem(KEY, JSON.stringify(items));
   notify();
 }
 
