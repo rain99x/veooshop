@@ -16,6 +16,7 @@ export type CartItem = {
 };
 
 const KEY = "veoo_cart_v2";
+const EMPTY: CartItem[] = [];
 
 function read(): CartItem[] {
   if (typeof window === "undefined") return [];
