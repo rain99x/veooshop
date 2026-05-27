@@ -1,10 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ShoppingBag, ShieldCheck } from "lucide-react";
-import { useCart } from "@/lib/cart-store";
+import { ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { CartDrawer } from "@/components/CartDrawer";
 
 export function SiteHeader() {
-  const { count } = useCart();
   const { isStaff } = useAuth();
   const path = useRouterState({ select: (s) => s.location.pathname });
 
@@ -43,18 +42,7 @@ export function SiteHeader() {
               Admin
             </Link>
           )}
-          <Link
-            to="/cart"
-            className="relative inline-flex items-center justify-center size-10 rounded-full hover:bg-accent transition-colors"
-            aria-label="Cart"
-          >
-            <ShoppingBag className="size-5" />
-            {count > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] font-medium size-5 rounded-full grid place-items-center">
-                {count}
-              </span>
-            )}
-          </Link>
+          <CartDrawer />
         </div>
       </div>
     </header>
