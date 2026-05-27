@@ -92,7 +92,7 @@ export function useCart() {
   const items = useSyncExternalStore(
     cartStore.subscribe,
     cartStore.get,
-    EMPTY,
+    () => EMPTY,
   );
   const selected = items.filter((i) => i.selected);
   return {
