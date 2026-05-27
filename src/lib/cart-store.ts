@@ -16,6 +16,7 @@ export type CartItem = {
 };
 
 const KEY = "veoo_cart_v2";
+const EMPTY: CartItem[] = [];
 
 function read(): CartItem[] {
   if (typeof window === "undefined") return [];
@@ -90,8 +91,8 @@ export function useCart() {
   useEffect(() => { cartStore.init(); setReady(true); }, []);
   const items = useSyncExternalStore(
     cartStore.subscribe,
-    () => cartStore.get(),
-    () => [] as CartItem[],
+    cartStore.get,
+    () => EMPTY,
   );
   const selected = items.filter((i) => i.selected);
   return {
