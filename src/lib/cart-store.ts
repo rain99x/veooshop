@@ -90,8 +90,8 @@ export function useCart() {
   useEffect(() => { cartStore.init(); setReady(true); }, []);
   const items = useSyncExternalStore(
     cartStore.subscribe,
-    () => cartStore.get(),
-    () => [] as CartItem[],
+    cartStore.get,
+    EMPTY,
   );
   const selected = items.filter((i) => i.selected);
   return {
