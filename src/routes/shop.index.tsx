@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 
-export const Route = createFileRoute("/shop")({
+export const Route = createFileRoute("/shop/")({
   component: Shop,
   head: () => ({
     meta: [
