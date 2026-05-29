@@ -44,6 +44,7 @@ function AdminLayout() {
     { to: "/admin", label: "Orders", icon: ScrollText, exact: true },
     { to: "/admin/products", label: "Products", icon: Package, adminOnly: false },
     ...(isAdmin ? [{ to: "/admin/team", label: "Team", icon: ShieldCheck, adminOnly: true }] : []),
+    { to: "/admin/account", label: "Tài khoản", icon: KeyRound, adminOnly: false },
   ];
 
   return (
