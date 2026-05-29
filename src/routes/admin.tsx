@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import { useAuth } from "@/lib/auth";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, Package, ScrollText, ShieldCheck } from "lucide-react";
+import { LogOut, Package, ScrollText, ShieldCheck, KeyRound } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -44,6 +44,7 @@ function AdminLayout() {
     { to: "/admin", label: "Orders", icon: ScrollText, exact: true },
     { to: "/admin/products", label: "Products", icon: Package, adminOnly: false },
     ...(isAdmin ? [{ to: "/admin/team", label: "Team", icon: ShieldCheck, adminOnly: true }] : []),
+    { to: "/admin/account", label: "Tài khoản", icon: KeyRound, adminOnly: false },
   ];
 
   return (
