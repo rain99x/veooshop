@@ -54,29 +54,45 @@ function Login() {
           veoo<span className="text-gold">.</span>
         </Link>
         <div className="bg-card border border-border rounded-2xl p-8 shadow-soft">
-          <h1 className="font-display text-2xl mb-1">{mode === "login" ? "Staff sign in" : "Create account"}</h1>
-          <p className="text-sm text-muted-foreground mb-6">For shop staff only.</p>
+          <h1 className="font-display text-2xl mb-1">
+            {mode === "login" ? "Staff sign in" : mode === "signup" ? "Create account" : "Quên mật khẩu"}
+          </h1>
+          <p className="text-sm text-muted-foreground mb-6">
+            {mode === "forgot"
+              ? "Nhập email, chúng tôi sẽ gửi liên kết đổi mật khẩu."
+              : "For shop staff only."}
+          </p>
           <form onSubmit={submit} className="space-y-4">
             <input
               type="email" required placeholder="email"
               value={email} onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
             />
-            <input
-              type="password" required placeholder="password" minLength={6}
-              value={password} onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
-            />
+            {mode !== "forgot" && (
+              <input
+                type="password" required placeholder="password" minLength={6}
+                value={password} onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+              />
+            )}
             <button
               type="submit" disabled={loading}
               className="w-full rounded-full bg-primary text-primary-foreground px-6 py-3 text-sm hover:bg-primary/90 disabled:opacity-50"
             >
-              {loading ? "…" : mode === "login" ? "Sign in" : "Create account"}
+              {loading ? "…" : mode === "login" ? "Sign in" : mode === "signup" ? "Create account" : "Gửi liên kết"}
             </button>
           </form>
+          {mode === "login" && (
+            <button
+              onClick={() => setMode("forgot")}
+              className="mt-4 w-full text-xs text-muted-foreground hover:text-foreground"
+            >
+              Quên mật khẩu?
+            </button>
+          )}
           <button
             onClick={() => setMode(mode === "login" ? "signup" : "login")}
-            className="mt-4 w-full text-xs text-muted-foreground hover:text-foreground"
+            className="mt-2 w-full text-xs text-muted-foreground hover:text-foreground"
           >
             {mode === "login" ? "Need an account? Sign up" : "Have an account? Sign in"}
           </button>
