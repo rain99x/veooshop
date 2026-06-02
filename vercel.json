@@ -1,8 +1,16 @@
 {
-"rewrites": [
-{
-"source": "/(.*)",
-"destination": "/index.html"
-}
-]
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/client",
+  "serverDirectory": "dist/server",
+  "functions": {
+    "dist/server/**/*.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "dist/server/server.js"
+    }
+  ]
 }
