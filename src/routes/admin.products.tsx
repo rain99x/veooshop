@@ -368,6 +368,7 @@ function ProductForm({
         is_handmade: form.is_handmade,
         prep_time: form.prep_time || null,
         product_code: productCode || null,
+        status: form.status,
       };
 
       if (product) {
