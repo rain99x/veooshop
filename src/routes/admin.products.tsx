@@ -189,12 +189,14 @@ function ProductsAdmin() {
         <ProductForm
           product={editing}
           allTags={tags ?? []}
+          initialOwner={editing ? (ownerMap[editing.id] ?? null) : null}
           onClose={() => { setCreating(false); setEditing(null); }}
           onSaved={() => {
             qc.invalidateQueries({ queryKey: ["admin", "products"] });
             qc.invalidateQueries({ queryKey: ["products", "all"] });
             qc.invalidateQueries({ queryKey: ["products", "featured"] });
             qc.invalidateQueries({ queryKey: ["tags"] });
+            qc.invalidateQueries({ queryKey: ["product_owners"] });
             setCreating(false); setEditing(null);
           }}
         />
