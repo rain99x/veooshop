@@ -204,10 +204,11 @@ function ProductsAdmin() {
 }
 
 function ProductAdminCard({
-  p, isAdmin, onInventoryUpdate, onEdit, onDelete,
+  p, isAdmin, owner, onInventoryUpdate, onEdit, onDelete,
 }: {
   p: Product;
   isAdmin: boolean;
+  owner: Owner | null;
   onInventoryUpdate: (next: number, note?: string) => void;
   onEdit: () => void;
   onDelete: () => void;
