@@ -123,6 +123,35 @@ export type Database = {
         }
         Relationships: []
       }
+      product_owners: {
+        Row: {
+          created_at: string
+          owner: Database["public"]["Enums"]["product_owner"]
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          owner: Database["public"]["Enums"]["product_owner"]
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          owner?: Database["public"]["Enums"]["product_owner"]
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_owners_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_tags: {
         Row: {
           product_id: string
@@ -210,6 +239,7 @@ export type Database = {
           prep_time: string | null
           price: number
           product_code: string | null
+          status: Database["public"]["Enums"]["product_status"]
           updated_at: string
         }
         Insert: {
@@ -224,6 +254,7 @@ export type Database = {
           prep_time?: string | null
           price?: number
           product_code?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
           updated_at?: string
         }
         Update: {
@@ -238,6 +269,7 @@ export type Database = {
           prep_time?: string | null
           price?: number
           product_code?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
           updated_at?: string
         }
         Relationships: []
@@ -327,6 +359,13 @@ export type Database = {
         | "ready_for_pickup"
         | "completed"
         | "cancelled"
+      product_owner: "Linh" | "Tú"
+      product_status:
+        | "available"
+        | "low_stock"
+        | "made_to_order"
+        | "sold_out"
+        | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -463,6 +502,14 @@ export const Constants = {
         "ready_for_pickup",
         "completed",
         "cancelled",
+      ],
+      product_owner: ["Linh", "Tú"],
+      product_status: [
+        "available",
+        "low_stock",
+        "made_to_order",
+        "sold_out",
+        "archived",
       ],
     },
   },
