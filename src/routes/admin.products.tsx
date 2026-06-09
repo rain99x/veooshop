@@ -20,6 +20,8 @@ type Variant = {
   sort_order: number;
   is_active: boolean;
 };
+type ProductStatus = "available" | "low_stock" | "made_to_order" | "sold_out" | "archived";
+type Owner = "Linh" | "Tú";
 type Product = {
   id: string;
   name: string;
@@ -31,9 +33,22 @@ type Product = {
   product_code: string | null;
   is_handmade: boolean;
   prep_time: string | null;
+  status: ProductStatus;
   product_tags: { tag_id: string; tags: Tag | null }[];
   product_variants: Variant[];
 };
+
+export const STATUS_OPTIONS: { value: ProductStatus; label: string }[] = [
+  { value: "available", label: "Available" },
+  { value: "low_stock", label: "Low Stock" },
+  { value: "made_to_order", label: "Made To Order" },
+  { value: "sold_out", label: "Sold Out" },
+  { value: "archived", label: "Archived" },
+];
+const STATUS_LABEL: Record<ProductStatus, string> = Object.fromEntries(
+  STATUS_OPTIONS.map((s) => [s.value, s.label])
+) as Record<ProductStatus, string>;
+const OWNER_OPTIONS: Owner[] = ["Linh", "Tú"];
 
 function ProductsAdmin() {
   const qc = useQueryClient();
