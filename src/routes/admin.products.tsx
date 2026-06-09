@@ -20,6 +20,8 @@ type Variant = {
   sort_order: number;
   is_active: boolean;
 };
+type ProductStatus = "available" | "low_stock" | "made_to_order" | "sold_out" | "archived";
+type Owner = "Linh" | "Tú";
 type Product = {
   id: string;
   name: string;
@@ -31,9 +33,22 @@ type Product = {
   product_code: string | null;
   is_handmade: boolean;
   prep_time: string | null;
+  status: ProductStatus;
   product_tags: { tag_id: string; tags: Tag | null }[];
   product_variants: Variant[];
 };
+
+export const STATUS_OPTIONS: { value: ProductStatus; label: string }[] = [
+  { value: "available", label: "Available" },
+  { value: "low_stock", label: "Low Stock" },
+  { value: "made_to_order", label: "Made To Order" },
+  { value: "sold_out", label: "Sold Out" },
+  { value: "archived", label: "Archived" },
+];
+const STATUS_LABEL: Record<ProductStatus, string> = Object.fromEntries(
+  STATUS_OPTIONS.map((s) => [s.value, s.label])
+) as Record<ProductStatus, string>;
+const OWNER_OPTIONS: Owner[] = ["Linh", "Tú"];
 
 function ProductsAdmin() {
   const qc = useQueryClient();
@@ -75,6 +90,22 @@ function ProductsAdmin() {
       return data as Tag[];
     },
   });
+
+  // Owner info is admin-only (RLS restricts the table to admins)
+  const { data: owners } = useQuery({
+    queryKey: ["product_owners"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("product_owners").select("product_id, owner");
+      if (error) throw error;
+      return data as { product_id: string; owner: Owner }[];
+    },
+  });
+  const ownerMap = useMemo(() => {
+    const m: Record<string, Owner> = {};
+    (owners ?? []).forEach((o) => { m[o.product_id] = o.owner; });
+    return m;
+  }, [owners]);
 
   const updateInventory = useMutation({
     mutationFn: async ({ id, current, next, note }: { id: string; current: number; next: number; note?: string }) => {
@@ -143,6 +174,7 @@ function ProductsAdmin() {
               key={p.id}
               p={p}
               isAdmin={isAdmin}
+              owner={ownerMap[p.id] ?? null}
               onInventoryUpdate={(next, note) => updateInventory.mutate({ id: p.id, current: p.inventory_quantity, next, note })}
               onEdit={() => setEditing(p)}
               onDelete={() => {
@@ -157,12 +189,14 @@ function ProductsAdmin() {
         <ProductForm
           product={editing}
           allTags={tags ?? []}
+          initialOwner={editing ? (ownerMap[editing.id] ?? null) : null}
           onClose={() => { setCreating(false); setEditing(null); }}
           onSaved={() => {
             qc.invalidateQueries({ queryKey: ["admin", "products"] });
             qc.invalidateQueries({ queryKey: ["products", "all"] });
             qc.invalidateQueries({ queryKey: ["products", "featured"] });
             qc.invalidateQueries({ queryKey: ["tags"] });
+            qc.invalidateQueries({ queryKey: ["product_owners"] });
             setCreating(false); setEditing(null);
           }}
         />
@@ -172,10 +206,11 @@ function ProductsAdmin() {
 }
 
 function ProductAdminCard({
-  p, isAdmin, onInventoryUpdate, onEdit, onDelete,
+  p, isAdmin, owner, onInventoryUpdate, onEdit, onDelete,
 }: {
   p: Product;
   isAdmin: boolean;
+  owner: Owner | null;
   onInventoryUpdate: (next: number, note?: string) => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -216,6 +251,18 @@ function ProductAdminCard({
             </div>
           )}
         </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border border-border">
+            {STATUS_LABEL[p.status]}
+          </span>
+          {isAdmin && owner && (
+            <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-accent text-foreground">
+              Owner · {owner}
+            </span>
+          )}
+        </div>
+
 
         {hasVariants ? (
           <div className="mt-3 space-y-1">
@@ -260,8 +307,8 @@ type VariantDraft = {
 };
 
 function ProductForm({
-  product, allTags, onClose, onSaved,
-}: { product: Product | null; allTags: Tag[]; onClose: () => void; onSaved: () => void }) {
+  product, allTags, initialOwner, onClose, onSaved,
+}: { product: Product | null; allTags: Tag[]; initialOwner: Owner | null; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({
     name: product?.name ?? "",
     description: product?.description ?? "",
@@ -272,7 +319,9 @@ function ProductForm({
     is_handmade: product?.is_handmade ?? true,
     prep_time: product?.prep_time ?? "",
     product_code: product?.product_code ?? "",
+    status: (product?.status ?? "available") as ProductStatus,
   });
+  const [owner, setOwner] = useState<Owner | "">(initialOwner ?? "");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
     product?.product_tags?.map((pt) => pt.tag_id) ?? []
   );
@@ -319,6 +368,7 @@ function ProductForm({
         is_handmade: form.is_handmade,
         prep_time: form.prep_time || null,
         product_code: productCode || null,
+        status: form.status,
       };
 
       if (product) {
@@ -338,6 +388,17 @@ function ProductForm({
           const { error } = await supabase.from("product_tags").insert(rows);
           if (error) throw error;
         }
+
+        // Sync owner (admin-only table)
+        if (owner) {
+          const { error } = await supabase
+            .from("product_owners")
+            .upsert({ product_id: productId, owner }, { onConflict: "product_id" });
+          if (error) throw error;
+        } else {
+          await supabase.from("product_owners").delete().eq("product_id", productId);
+        }
+
 
         // Sync variants — delete removed, upsert kept
         const existingIds = (product?.product_variants ?? []).map((v) => v.id);
@@ -421,6 +482,33 @@ function ProductForm({
           <FormField label="Description">
             <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="input" />
           </FormField>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Status">
+              <select
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value as ProductStatus })}
+                className="input"
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Owner (admin only)">
+              <select
+                value={owner}
+                onChange={(e) => setOwner(e.target.value as Owner | "")}
+                className="input"
+              >
+                <option value="">— None —</option>
+                {OWNER_OPTIONS.map((o) => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
+              </select>
+            </FormField>
+          </div>
+
 
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Price (VND) *">

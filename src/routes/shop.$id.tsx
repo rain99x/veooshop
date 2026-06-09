@@ -35,6 +35,7 @@ function ProductPage() {
         .select("*, product_tags(tags(name)), product_variants(*)")
         .eq("id", id)
         .eq("is_active", true)
+        .neq("status", "archived")
         .maybeSingle();
       if (error) throw error;
       return data;
@@ -84,7 +85,7 @@ function ProductPage() {
   const stock = hasVariants
     ? (selectedVariant?.inventory_quantity ?? 0)
     : product.inventory_quantity;
-  const soldOut = stock <= 0;
+  const soldOut = product.status === "sold_out" || stock <= 0;
   const tags = (product.product_tags ?? [])
     .map((pt: { tags: { name: string } | null }) => pt.tags)
     .filter((t: { name: string } | null): t is { name: string } => !!t);

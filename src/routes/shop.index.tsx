@@ -24,6 +24,7 @@ type ProductRow = {
   image_url: string | null;
   inventory_quantity: number;
   product_code: string | null;
+  status: string | null;
   product_tags: { tags: { id: string; name: string } | null }[];
   product_variants: { inventory_quantity: number; is_active: boolean }[];
 };
@@ -37,8 +38,9 @@ function Shop() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, description, price, image_url, inventory_quantity, product_code, product_tags(tags(id, name)), product_variants(inventory_quantity, is_active)")
+        .select("id, name, description, price, image_url, inventory_quantity, product_code, status, product_tags(tags(id, name)), product_variants(inventory_quantity, is_active)")
         .eq("is_active", true)
+        .neq("status", "archived")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as ProductRow[];

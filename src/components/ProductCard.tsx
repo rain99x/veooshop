@@ -8,6 +8,7 @@ export type ProductCardData = {
   image_url: string | null;
   inventory_quantity: number;
   product_code?: string | null;
+  status?: string | null;
   tags?: { name: string }[];
   variants?: { inventory_quantity: number; is_active: boolean }[];
 };
@@ -18,7 +19,7 @@ export function ProductCard({ p }: { p: ProductCardData }) {
     .reduce((s, v) => s + v.inventory_quantity, 0);
   const hasVariants = (p.variants?.length ?? 0) > 0;
   const totalStock = hasVariants ? variantStock : p.inventory_quantity;
-  const soldOut = totalStock <= 0;
+  const soldOut = p.status === "sold_out" || totalStock <= 0;
 
   return (
     <Link to="/shop/$id" params={{ id: p.id }} className="group block">
