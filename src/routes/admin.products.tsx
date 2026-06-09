@@ -389,6 +389,17 @@ function ProductForm({
           if (error) throw error;
         }
 
+        // Sync owner (admin-only table)
+        if (owner) {
+          const { error } = await supabase
+            .from("product_owners")
+            .upsert({ product_id: productId, owner }, { onConflict: "product_id" });
+          if (error) throw error;
+        } else {
+          await supabase.from("product_owners").delete().eq("product_id", productId);
+        }
+
+
         // Sync variants — delete removed, upsert kept
         const existingIds = (product?.product_variants ?? []).map((v) => v.id);
         const keepIds = variants.map((v) => v.id).filter(Boolean) as string[];
