@@ -484,6 +484,33 @@ function ProductForm({
           </FormField>
 
           <div className="grid grid-cols-2 gap-3">
+            <FormField label="Status">
+              <select
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value as ProductStatus })}
+                className="input"
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Owner (admin only)">
+              <select
+                value={owner}
+                onChange={(e) => setOwner(e.target.value as Owner | "")}
+                className="input"
+              >
+                <option value="">— None —</option>
+                {OWNER_OPTIONS.map((o) => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
+              </select>
+            </FormField>
+          </div>
+
+
+          <div className="grid grid-cols-2 gap-3">
             <FormField label="Price (VND) *">
               <input
                 type="number" step="1" min={0} required
