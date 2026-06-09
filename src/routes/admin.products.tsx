@@ -174,6 +174,7 @@ function ProductsAdmin() {
               key={p.id}
               p={p}
               isAdmin={isAdmin}
+              owner={ownerMap[p.id] ?? null}
               onInventoryUpdate={(next, note) => updateInventory.mutate({ id: p.id, current: p.inventory_quantity, next, note })}
               onEdit={() => setEditing(p)}
               onDelete={() => {
