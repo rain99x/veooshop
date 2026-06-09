@@ -91,6 +91,22 @@ function ProductsAdmin() {
     },
   });
 
+  // Owner info is admin-only (RLS restricts the table to admins)
+  const { data: owners } = useQuery({
+    queryKey: ["product_owners"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("product_owners").select("product_id, owner");
+      if (error) throw error;
+      return data as { product_id: string; owner: Owner }[];
+    },
+  });
+  const ownerMap = useMemo(() => {
+    const m: Record<string, Owner> = {};
+    (owners ?? []).forEach((o) => { m[o.product_id] = o.owner; });
+    return m;
+  }, [owners]);
+
   const updateInventory = useMutation({
     mutationFn: async ({ id, current, next, note }: { id: string; current: number; next: number; note?: string }) => {
       const { error } = await supabase.from("products").update({ inventory_quantity: next }).eq("id", id);
