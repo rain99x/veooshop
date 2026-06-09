@@ -307,8 +307,8 @@ type VariantDraft = {
 };
 
 function ProductForm({
-  product, allTags, onClose, onSaved,
-}: { product: Product | null; allTags: Tag[]; onClose: () => void; onSaved: () => void }) {
+  product, allTags, initialOwner, onClose, onSaved,
+}: { product: Product | null; allTags: Tag[]; initialOwner: Owner | null; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState({
     name: product?.name ?? "",
     description: product?.description ?? "",
@@ -319,7 +319,9 @@ function ProductForm({
     is_handmade: product?.is_handmade ?? true,
     prep_time: product?.prep_time ?? "",
     product_code: product?.product_code ?? "",
+    status: (product?.status ?? "available") as ProductStatus,
   });
+  const [owner, setOwner] = useState<Owner | "">(initialOwner ?? "");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
     product?.product_tags?.map((pt) => pt.tag_id) ?? []
   );
