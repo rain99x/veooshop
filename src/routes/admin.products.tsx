@@ -250,6 +250,18 @@ function ProductAdminCard({
           )}
         </div>
 
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full border border-border">
+            {STATUS_LABEL[p.status]}
+          </span>
+          {isAdmin && owner && (
+            <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-accent text-foreground">
+              Owner · {owner}
+            </span>
+          )}
+        </div>
+
+
         {hasVariants ? (
           <div className="mt-3 space-y-1">
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
