@@ -35,6 +35,7 @@ function ProductPage() {
         .select("*, product_tags(tags(name)), product_variants(*)")
         .eq("id", id)
         .eq("is_active", true)
+        .neq("status", "archived")
         .maybeSingle();
       if (error) throw error;
       return data;
