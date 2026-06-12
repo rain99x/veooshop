@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { AuthShell } from "@/components/AuthShell";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -10,7 +11,7 @@ export const Route = createFileRoute("/login")({
 
 function Login() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,13 +24,6 @@ function Login() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         navigate({ to: "/admin" });
-      } else if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        });
-        if (error) throw error;
-        toast.success("Đã gửi liên kết đặt lại mật khẩu tới email của bạn.");
-        setMode("login");
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -48,75 +42,51 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen grid place-items-center bg-background px-6">
-      <div className="w-full max-w-sm">
-        <Link to="/" className="font-display text-2xl block text-center mb-10">
-          veoo<span className="text-gold">.</span>
-        </Link>
-        <div className="bg-card border border-border rounded-2xl p-8 shadow-soft">
-          <h1 className="font-display text-2xl mb-1">
-            {mode === "login"
-              ? "Staff sign in"
-              : mode === "signup"
-                ? "Create account"
-                : "Reset password"}
-          </h1>
-          <p className="text-sm text-muted-foreground mb-6">
-            {mode === "forgot"
-              ? "Enter your email to receive a reset link."
-              : "For shop staff only."}
-          </p>
-          <form onSubmit={submit} className="space-y-4">
-            <input
-              type="email" required placeholder="email"
-              value={email} onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
-            />
-            {mode !== "forgot" && (
-              <input
-                type="password" required placeholder="password" minLength={6}
-                value={password} onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
-              />
-            )}
-            <button
-              type="submit" disabled={loading}
-              className="w-full rounded-full bg-primary text-primary-foreground px-6 py-3 text-sm hover:bg-primary/90 disabled:opacity-50"
-            >
-              {loading
-                ? "…"
-                : mode === "login"
-                  ? "Sign in"
-                  : mode === "signup"
-                    ? "Create account"
-                    : "Send reset link"}
-            </button>
-          </form>
-          {mode === "login" && (
-            <button
-              onClick={() => setMode("forgot")}
-              className="mt-4 w-full text-xs text-muted-foreground hover:text-foreground"
-            >
-              Quên mật khẩu?
-            </button>
-          )}
-          <button
-            onClick={() =>
-              setMode(mode === "login" ? "signup" : "login")
-            }
-            className="mt-2 w-full text-xs text-muted-foreground hover:text-foreground"
-          >
-            {mode === "login"
-              ? "Need an account? Sign up"
-              : mode === "signup"
-                ? "Have an account? Sign in"
-                : "← Back to sign in"}
-          </button>
-        </div>
-        <Link to="/" className="block text-center mt-6 text-xs text-muted-foreground hover:text-foreground">
+    <AuthShell
+      title={mode === "login" ? "Staff sign in" : "Create account"}
+      subtitle="For shop staff only."
+      footer={
+        <Link
+          to="/"
+          className="block text-center mt-6 text-xs text-muted-foreground hover:text-foreground"
+        >
           ← Back to shop
         </Link>
-      </div>
-    </div>
+      }
+    >
+      <form onSubmit={submit} className="space-y-4">
+        <input
+          type="email" required placeholder="email"
+          value={email} onChange={(e) => setEmail(e.target.value)}
+          className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+        />
+        <input
+          type="password" required placeholder="password" minLength={6}
+          value={password} onChange={(e) => setPassword(e.target.value)}
+          className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+        />
+        <button
+          type="submit" disabled={loading}
+          className="w-full rounded-full bg-primary text-primary-foreground px-6 py-3 text-sm hover:bg-primary/90 disabled:opacity-50"
+        >
+          {loading ? "…" : mode === "login" ? "Sign in" : "Create account"}
+        </button>
+      </form>
+
+      {mode === "login" && (
+        <Link
+          to="/reset-password"
+          className="mt-4 block w-full text-center text-xs text-muted-foreground hover:text-foreground"
+        >
+          Forgot password?
+        </Link>
+      )}
+      <button
+        onClick={() => setMode(mode === "login" ? "signup" : "login")}
+        className="mt-2 w-full text-xs text-muted-foreground hover:text-foreground"
+      >
+        {mode === "login" ? "Need an account? Sign up" : "Have an account? Sign in"}
+      </button>
+    </AuthShell>
   );
 }
